@@ -3,23 +3,26 @@ variable "bucket_name" {
   type        = string
 }
 
-variable "bucket_acl" {
-  description = "The ACL for the S3 bucket"
-  type        = string
-  default     = "private"
-}
-
 variable "enable_cloudfront" {
   description = "Enable CloudFront distribution"
   type        = bool
   default     = true
 }
 
-variable "cloudfront_logging_config" {
-  description = "CloudFront logging configuration"
-  type = object({
-    bucket = string
-    prefix = string
-  })
-  default = null
+variable "enable_cloudfront_logging" {
+  description = "Enable CloudFront access logging"
+  type        = bool
+  default     = false
+}
+
+variable "cloudfront_logging_bucket" {
+  description = "The S3 bucket for CloudFront access logs"
+  type        = string
+  default     = null
+}
+
+variable "cloudfront_logging_prefix" {
+  description = "The prefix for CloudFront access logs"
+  type        = string
+  default     = null
 }

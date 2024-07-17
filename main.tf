@@ -6,13 +6,25 @@ resource "aws_s3_bucket" "frontend_bucket" {
     error_document = "error.html"
   }
 
-  acl = var.bucket_acl
+  acl = var.enable_cloudfront ? "private" : "public-read"
 
   tags = {
     Name = var.bucket_name
   }
 
   policy = var.enable_cloudfront ? local.cloudfront_policy : local.global_policy
+}
+
+resource "aws_s3_bucket" "cloudfront_logging_bucket" {
+  count = var.enable_cloudfront_logging ? 1 : 0
+
+  bucket = coalesce(var.cloudfront_logging_bucket, "cloudfront-logs-${data.aws_caller_identity.current.account_id}")
+
+  acl    = "log-delivery-write"
+
+  tags = {
+    Name = "CloudFrontLoggingBucket"
+  }
 }
 
 resource "aws_cloudfront_distribution" "frontend_distribution" {
@@ -59,12 +71,9 @@ resource "aws_cloudfront_distribution" "frontend_distribution" {
     cloudfront_default_certificate = true
   }
 
-  dynamic "logging_config" {
-    for_each = var.cloudfront_logging_config != null ? [var.cloudfront_logging_config] : []
-    content {
-      bucket = logging_config.value.bucket
-      prefix = logging_config.value.prefix
-    }
+  logging_config {
+    bucket = coalesce(var.cloudfront_logging_bucket, aws_s3_bucket.cloudfront_logging_bucket[0].bucket_domain_name)
+    prefix = "${coalesce(var.cloudfront_logging_prefix, "cloudfront/")}${var.bucket_name}/"
   }
 }
 
