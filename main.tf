@@ -20,7 +20,7 @@ resource "aws_s3_bucket" "cloudfront_logging_bucket" {
 
   bucket = coalesce(var.cloudfront_logging_bucket, "cloudfront-logs-${data.aws_caller_identity.current.account_id}")
 
-  acl    = "log-delivery-write"
+  acl = "log-delivery-write"
 
   tags = {
     Name = "CloudFrontLoggingBucket"
@@ -80,8 +80,8 @@ resource "aws_cloudfront_distribution" "frontend_distribution" {
 resource "aws_cloudfront_origin_access_control" "oac" {
   count = var.enable_cloudfront ? 1 : 0
 
-  name            = "OAC-${var.bucket_name}"
-  origin_type     = "s3"
+  name             = "OAC-${var.bucket_name}"
+  origin_type      = "s3"
   signing_behavior = "always"
   signing_protocol = "sigv4"
 }
@@ -95,7 +95,7 @@ locals {
         Principal = {
           AWS = "${aws_cloudfront_origin_access_control.oac[0].cloudfront_access_identity}"
         },
-        Action = "s3:GetObject",
+        Action   = "s3:GetObject",
         Resource = "arn:aws:s3:::${var.bucket_name}/*"
       }
     ]
@@ -105,10 +105,10 @@ locals {
     Version = "2012-10-17",
     Statement = [
       {
-        Effect = "Allow",
+        Effect    = "Allow",
         Principal = "*",
-        Action = "s3:GetObject",
-        Resource = "arn:aws:s3:::${var.bucket_name}/*"
+        Action    = "s3:GetObject",
+        Resource  = "arn:aws:s3:::${var.bucket_name}/*"
       }
     ]
   })
