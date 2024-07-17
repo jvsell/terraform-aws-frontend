@@ -27,15 +27,6 @@ resource "aws_s3_bucket" "cloudfront_logging_bucket" {
   }
 }
 
-resource "aws_s3_bucket_acl" "cloudfront_logging_bucket_acl" {
-  count = var.enable_cloudfront_logging ? 1 : 0
-
-  bucket = aws_s3_bucket.cloudfront_logging_bucket[count.index].bucket
-  acl    = "log-delivery-write"
-
-  # Define as permissões de escrita para o bucket de logging aqui, se necessário.
-}
-
 resource "aws_cloudfront_distribution" "frontend_distribution" {
   count = var.enable_cloudfront ? 1 : 0
 
@@ -43,7 +34,7 @@ resource "aws_cloudfront_distribution" "frontend_distribution" {
     domain_name = aws_s3_bucket.frontend_bucket.bucket_regional_domain_name
     origin_id   = var.bucket_name
     s3_origin_config {
-      origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
+      origin_access_identity = aws_cloudfront_origin_access_identity.oai.cloudfront_access_identity_path
     }
   }
 
@@ -86,13 +77,19 @@ resource "aws_cloudfront_distribution" "frontend_distribution" {
   }
 }
 
+resource "aws_cloudfront_origin_access_identity" "oai" {
+  count = var.enable_cloudfront ? 1 : 0
+
+  comment = "OAI for ${var.bucket_name}"
+}
+
 resource "aws_cloudfront_origin_access_control" "oac" {
   count = var.enable_cloudfront ? 1 : 0
 
-  name            = "OAC-${var.bucket_name}"
-  origin_type     = "s3"
-  signing_behavior = "always"
-  signing_protocol = "sigv4"
+  origin_id                           = aws_cloudfront_distribution.frontend_distribution[count.index].id
+  origin_access_control_origin_type   = "s3"  # Aqui define o tipo de origem como S3
+
+  # Outros argumentos necessários conforme sua configuração
 }
 
 locals {
@@ -102,7 +99,7 @@ locals {
       {
         Effect = "Allow",
         Principal = {
-          AWS = "${aws_cloudfront_origin_access_control.oac[0].cloudfront_access_identity}"
+          AWS = aws_cloudfront_origin_access_identity.oai[count.index].s3_canonical_user_id
         },
         Action = "s3:GetObject",
         Resource = "arn:aws:s3:::${var.bucket_name}/*"
